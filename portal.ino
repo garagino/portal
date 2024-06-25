@@ -4,7 +4,7 @@
 #define pinSensor A0
 
 // Endereço e configurações do LCD
-#define endereco  0x27 // Endereços comuns: 0x27, 0x3F
+#define endereco  0x27
 #define colunas   16
 #define linhas    2
 
@@ -15,9 +15,12 @@
 int contador = 1;
 bool estado = false;
 bool estadoAnt = false;
+bool timerAtivo = false;
 unsigned long tempoInicial = 0;
 unsigned long tempoDecorrido = 0;
-bool timerAtivo = false;
+unsigned long tempoDelay = 0;
+bool delayAtivo = false;
+
 
 LiquidCrystal_I2C lcd(endereco, colunas, linhas);
 
@@ -33,10 +36,10 @@ void setup() {
 
   // Mensagem inicial no LCD
   lcd.print("- Ola, Mundo! -"); 
-  delay(1000); // Delay de 5 segundos
+  delay(1000); // Delay de 1s
   lcd.setCursor(0, 1); // Posiciona o cursor na primeira coluna da linha 2
   lcd.print("Fim do Setup ()");
-  delay(1000); // Delay de 5 segundos
+  delay(1000); // Delay de 1s
   lcd.clear(); // Limpa o display
 
   // Inicializa o contador no LCD
@@ -47,7 +50,8 @@ void setup() {
 
 void loop() {
   estado = !digitalRead(pinSensor);
-  if (estado && !estadoAnt) {
+  
+  if (estado && !estadoAnt && !delayAtivo) {
     lcd.clear(); // Limpa o display
     lcd.print("Volta ");
     lcd.print(contador);
@@ -56,6 +60,8 @@ void loop() {
       // Inicia o timer
       tempoInicial = millis();
       timerAtivo = true;
+      delayAtivo = true;
+      tempoDelay = millis(); // Inicia o delay
     } else {
       // Encerra o timer
       unsigned long tempoFinal = millis();
@@ -63,13 +69,19 @@ void loop() {
       timerAtivo = false;
       contador++;
     }
-    
   }
   
   if (timerAtivo) {
     // Atualiza o tempo decorrido continuamente
     unsigned long tempoAtual = millis();
     tempoDecorrido = tempoAtual - tempoInicial;
+  }
+  
+  if (delayAtivo) {
+    // Verifica se o delay de 1 segundo já passou
+    if (millis() - tempoDelay >= 1000) {
+      delayAtivo = false;
+    }
   }
   
   // Exibe o tempo no formato mm:ss:ms
@@ -81,7 +93,7 @@ void loop() {
   snprintf(buffer, sizeof(buffer), "%02lu:%02lu:%03lu", minutos, segundos, milissegundos);
   lcd.setCursor(0, 1); // Posiciona o cursor na primeira coluna da segunda linha
   lcd.print(buffer);
-
+  
   if (estado) {
     digitalWrite(vermelho, LOW);  // Apaga o LED vermelho
     digitalWrite(verde, HIGH);    // Acende o LED verde
